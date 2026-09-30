@@ -4,7 +4,7 @@ import os
 import json
 
 # ---------------------------------------------------------
-# 1. إعدادات الصفحة
+# 1. إعدادات الصفحة والتصميم الممركز بالكامل
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="بوابة استعلام الرواتب الشهرية",
@@ -13,20 +13,111 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# تطبيق اتجاه النص العربي فقط
+# تصميم وتنسيقات CSS بلغة الألوان المائية الحضرية (Pastel & Modern Gradients)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+    
     html, body, [class*="css"]  {
         font-family: 'Cairo', sans-serif;
         direction: rtl;
         text-align: right;
     }
-    /* جعل العرض يرتكز بالمنتصف */
+    
+    .stApp {
+        background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
+    }
+
+    /* حصر العرض وتوسطه بمنتصف الورقة تماماً */
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.8rem;
         padding-bottom: 3rem;
-        max-width: 1100px;
+        max-width: 950px !important;
+        margin: 0 auto;
+    }
+
+    /* مربع العنوان الرئيسي بلون أزرق تدرجي أزرق احترافي بمنتصف الورقة */
+    .main-blue-header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        padding: 22px 20px;
+        border-radius: 16px;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
+    }
+    .main-blue-header h1 {
+        color: #ffffff !important;
+        font-weight: 800;
+        font-size: 26px;
+        margin: 0;
+    }
+    .main-blue-header p {
+        color: #e2e8f0;
+        margin-top: 6px;
+        font-size: 15px;
+        font-weight: 400;
+    }
+
+    /* كروت البيانات الوظيفية بألوان مائية هادئة (Soft Watercolors) */
+    .info-card-top {
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        border-right: 5px solid #0284c7;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+    }
+    
+    .info-card-bottom {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-right: 5px solid #16a34a;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(22, 163, 74, 0.08);
+    }
+
+    .card-label {
+        font-size: 13px;
+        color: #475569;
+        font-weight: 600;
+        margin-bottom: 3px;
+    }
+    .card-value {
+        font-size: 17px;
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    /* بطاقة صافي الراتب المستحق في منتصف الورقة بألوان مائية مميزة */
+    .net-salary-box {
+        background: linear-gradient(135deg, #d8b4fe 0%, #818cf8 50%, #34d399 100%);
+        color: white;
+        border-radius: 18px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(129, 140, 248, 0.3);
+        margin: 25px auto 15px auto;
+        max-width: 600px;
+    }
+    .net-salary-box h2 {
+        color: #ffffff !important;
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+    }
+    .net-salary-box h1 {
+        color: #ffffff !important;
+        margin: 10px 0 0 0;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    /* تنسيقات التبويبات والأزرار */
+    .stTabs [data-baseweb="tab-list"] {
+        justify-content: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -75,9 +166,14 @@ def fmt(val):
 # ---------------------------------------------------------
 # 3. الهيكل الرئيسي للتطبيق
 # ---------------------------------------------------------
-st.title("💳 بوابة استعلام مفردات الراتب الشهري")
-st.caption("نظام إلكتروني آمن لاستعلام مفردات الراتب والبدلات والاستقطاعات")
-st.markdown("---")
+
+# مربع العنوان الأزرق الرئيسي بمنتصف الورقة
+st.markdown("""
+    <div class="main-blue-header">
+        <h1>💳 بوابة استعلام مفردات الراتب الشهري</h1>
+        <p>نظام إلكتروني آمن للاستعلام الفردي عن الرواتب والبدلات والاستقطاعات</p>
+    </div>
+""", unsafe_allow_html=True)
 
 tabs = st.tabs(["🔒 استعلام الموظف", "⚙️ لوحة تحكم الإدارة"])
 
@@ -117,26 +213,51 @@ with tabs[0]:
                         emp = match.iloc[0]
                         st.success(f"✅ تم العثور على سجل الموظف بنجاح!")
 
-                        # --- 1. معلومات الموظف في منتصف الصفحة ---
-                        with st.container():
-                            st.markdown("### 👤 البيانات الوظيفية للموظف")
-                            m1, m2, m3, m4 = st.columns(4)
-                            m1.metric("اسم الموظف", str(emp.get('اسم الموظف', '-')))
-                            m2.metric("العنوان الوظيفي", str(emp.get('عنوان وظيفي', '-')))
-                            m3.metric("الدرجة الوظيفية", str(emp.get('الدرجة الوظيفية', '-')))
-                            m4.metric("المرحلة", str(emp.get('المرحلة', '-')))
+                        # --- 1. بطاقات اسم الموظف والعنوان الوظيفي في الأعلى ---
+                        st.markdown("### 👤 البيانات الوظيفية")
+                        
+                        col_top1, col_top2 = st.columns(2)
+                        with col_top1:
+                            st.markdown(f"""
+                                <div class="info-card-top">
+                                    <div class="card-label">اسم الموظف</div>
+                                    <div class="card-value">{emp.get('اسم الموظف', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        with col_top2:
+                            st.markdown(f"""
+                                <div class="info-card-top">
+                                    <div class="card-label">العنوان الوظيفي</div>
+                                    <div class="card-value">{emp.get('عنوان وظيفي', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+
+                        # --- 2. وتحتها مباشرة الدرجة الوظيفية والمرحلة ---
+                        col_bot1, col_bot2 = st.columns(2)
+                        with col_bot1:
+                            st.markdown(f"""
+                                <div class="info-card-bottom">
+                                    <div class="card-label">الدرجة الوظيفية</div>
+                                    <div class="card-value">{emp.get('الدرجة الوظيفية', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        with col_bot2:
+                            st.markdown(f"""
+                                <div class="info-card-bottom">
+                                    <div class="card-label">المرحلة</div>
+                                    <div class="card-value">{emp.get('المرحلة', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
 
                         st.markdown("---")
 
-                        # --- 2. بناء الجداول في منتصف الورقة ---
+                        # --- 3. الجداول المنظمة للاستحقاقات والخصومات ---
                         st.markdown("### 📋 كشف تفاصيل ومفردات الراتب")
                         
                         col_earn, col_ded = st.columns(2)
 
-                        # جدول الاستحقاقات والبدلات
                         with col_earn:
                             st.markdown("#### 📈 الاستحقاقات والبدلات")
-                            
                             earn_data = {
                                 "مفردات الاستحقاق": [
                                     "الراتب الاسمي", "مخصصات الزوجية", "مخصصات الأطفال",
@@ -157,10 +278,8 @@ with tabs[0]:
                             
                             st.info(f"**إجمالي الاستحقاقات (المجموع): {fmt(emp.get('المجموع', 0))}**")
 
-                        # جدول الاستقطاعات والخصومات
                         with col_ded:
                             st.markdown("#### 📉 الخصومات والاستقطاعات")
-                            
                             ded_data = {
                                 "مفردات الاستقطاع": [
                                     "استقطاع التقاعد", "ضريبة الدخل",
@@ -176,15 +295,13 @@ with tabs[0]:
                             
                             st.warning(f"**إجمالي الاستقطاعات: {fmt(emp.get('المجموع.1', 0))}**")
 
-                        st.markdown("---")
-
-                        # --- 3. بطاقة الصافي الكبيرة في المنتصف ---
-                        st.markdown("### 💰 صافي الراتب المستحق للقبض")
-                        st.metric(
-                            label="الصافي النهائي للموظف",
-                            value=fmt(emp.get('الصافي', 0)),
-                            delta="مبلغ قابل للصرف"
-                        )
+                        # --- 4. بطاقة صافي الراتب المستحق في المنتصف بجمالية عالية ---
+                        st.markdown(f"""
+                            <div class="net-salary-box">
+                                <h2>💰 صافي الراتب المستحق للقبض</h2>
+                                <h1>{fmt(emp.get('الصافي', 0))}</h1>
+                            </div>
+                        """, unsafe_allow_html=True)
 
                     else:
                         st.error("❌ البيانات المدخلة غير صحيحة. يرجى التأكد من الرقم الوظيفي والكود الخاص.")
