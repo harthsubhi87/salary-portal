@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import time
@@ -228,7 +229,7 @@ with tabs[0]:
 
     if not companies:
         st.info(
-            "ℹ️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب (➕ إضافة مؤسسة)."
+            "ℹ️️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب (➕ إضافة مؤسسة)."
         )
     else:
         comp_options = {v["name"]: k for k, v in companies.items()}
@@ -259,7 +260,7 @@ with tabs[0]:
             df = load_company_data(comp_info["data_file"])
             if df is None:
                 st.warning(
-                    f"⚠️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة ({selected_comp_name}) بعد."
+                    f"⚠️️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة ({selected_comp_name}) بعد."
                 )
             elif not emp_id or not secret_code:
                 st.error(
@@ -462,7 +463,7 @@ with tabs[1]:
             # 1. رفع الملف وتحميل النماذج
             with admin_subtabs[0]:
                 st.markdown(f"### 📥 تحميل قالب كشف الرواتب المعتمد (Template)")
-                st.info("💡 يمكنك تحميل ملف النموذج الفارغ المجهز بجميع الأعمدة والبدلات المطلوبة، ثم تعبئته ببيانات موظفيك ورفعه أدناه:")
+                st.info("💡 يمكنك تحميل ملف النموذج الفارغ بصيغة Excel المجهز بكافة الأعمدة، ثم تعبئته ورفعه:")
 
                 template_data = pd.DataFrame([{
                     "الرقم الوظيفي": 1001,
@@ -490,13 +491,15 @@ with tabs[1]:
                     "الصافي": 1000000
                 }])
 
-                csv_buffer = template_data.to_csv(index=False).encode('utf-8-sig')
+                excel_buffer = io.BytesIO()
+                with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    template_data.to_excel(writer, index=False, sheet_name="Salary_Template")
 
                 st.download_button(
-                    label="📥 تحميل قالب الإكسل النموذجي (Salary_Template.csv)",
-                    data=csv_buffer,
-                    file_name="Salary_Template.csv",
-                    mime="text/csv",
+                    label="📥 تحميل قالب الإكسل النموذجي (Salary_Template.xlsx)",
+                    data=excel_buffer.getvalue(),
+                    file_name="Salary_Template.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True,
                     type="secondary"
                 )
