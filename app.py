@@ -134,19 +134,15 @@ def load_companies():
     if os.path.exists(COMPANIES_FILE):
         try:
             with open(COMPANIES_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                companies = json.load(f)
+                # إزالة المؤسسة الافتراضية القديمة إن وجدت
+                if "comp_default" in companies:
+                    del companies["comp_default"]
+                    save_companies(companies)
+                return companies
         except:
             pass
-    # مؤسسات افتراضية أولية عند بداية التشغيل
-    default_companies = {
-        "comp_default": {
-            "name": "المؤسسة الرئيسية / العامة",
-            "password": "Admin@Salary2026",
-            "data_file": "Salary_Current.xlsx"
-        }
-    }
-    save_companies(default_companies)
-    return default_companies
+    return {}
 
 def save_companies(companies_dict):
     """حفظ سجل المؤسسات"""
@@ -186,141 +182,143 @@ st.markdown("""
 
 companies = load_companies()
 
-tabs = st.tabs(["🔒 استعلام الموظف", "⚙️ لوحة تحكم إدارة المؤسسات", "➕ إضافة مؤسسة جديدة"])
+tabs = st.tabs(["🔒 استعلام الموظف", "⚙️ لوحة تحكم إدارة المؤسسات", "➕ إضافة مؤسسة جديدة", "🗑️ حذف مؤسسة"])
 
 # =========================================================
-# الواجهة الأولى: استعلام الموظف (موزع حسب المؤسسة)
+# الواجهة الأولى: استعلام الموظف
 # =========================================================
 with tabs[0]:
     st.subheader("🔑 إدخال بيانات الاستعلام")
     
-    # اختيار المؤسسة
-    comp_options = {v["name"]: k for k, v in companies.items()}
-    selected_comp_name = st.selectbox("اختر المؤسسة / الشركة التابع لها:", list(comp_options.keys()))
-    selected_comp_key = comp_options[selected_comp_name]
-    comp_info = companies[selected_comp_key]
+    if not companies:
+        st.info("ℹ️ لا توجد مؤسسات أو شركات مضافة في النظام حالياً. يرجى من مدير النظام إضافة مؤسسة من تبويب (➕ إضافة مؤسسة جديدة).")
+    else:
+        comp_options = {v["name"]: k for k, v in companies.items()}
+        selected_comp_name = st.selectbox("اختر المؤسسة / الشركة التابع لها:", list(comp_options.keys()))
+        selected_comp_key = comp_options[selected_comp_name]
+        comp_info = companies[selected_comp_key]
 
-    col_input1, col_input2 = st.columns(2)
-    with col_input1:
-        emp_id = st.text_input("الرقم الوظيفي:", placeholder="مثال: 1001", key="emp_id")
-    with col_input2:
-        secret_code = st.text_input("الكود الخاص / الرمز السري:", type="password", placeholder="••••••••", key="code")
+        col_input1, col_input2 = st.columns(2)
+        with col_input1:
+            emp_id = st.text_input("الرقم الوظيفي:", placeholder="مثال: 1001", key="emp_id")
+        with col_input2:
+            secret_code = st.text_input("الكود الخاص / الرمز السري:", type="password", placeholder="••••••••", key="code")
 
-    btn_search = st.button("🔍 عرض مفردات الراتب", use_container_width=True, type="primary")
+        btn_search = st.button("🔍 عرض مفردات الراتب", use_container_width=True, type="primary")
 
-    if btn_search:
-        df = load_company_data(comp_info["data_file"])
-        if df is None:
-            st.warning(f"⚠️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة ({selected_comp_name}) بعد.")
-        elif not emp_id or not secret_code:
-            st.error("يرجى إدخال الرقم الوظيفي والكود الخاص بك لاستكمال الاستعلام.")
-        else:
-            if 'الرقم الوظيفي' not in df.columns or 'كود الموظف' not in df.columns:
-                st.error("خطأ في بنية ملف البيانات لهذه المؤسسة: يجب أن يحتوي الملف على عمودي 'الرقم الوظيفي' و 'كود الموظف'.")
+        if btn_search:
+            df = load_company_data(comp_info["data_file"])
+            if df is None:
+                st.warning(f"⚠️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة ({selected_comp_name}) بعد.")
+            elif not emp_id or not secret_code:
+                st.error("يرجى إدخال الرقم الوظيفي والكود الخاص بك لاستكمال الاستعلام.")
             else:
-                df['الرقم الوظيفي_str'] = df['الرقم الوظيفي'].astype(str).str.strip()
-                df['كود الموظف_str'] = df['كود الموظف'].astype(str).str.strip()
-
-                match = df[(df['الرقم الوظيفي_str'] == str(emp_id).strip()) & 
-                           (df['كود الموظف_str'] == str(secret_code).strip())]
-
-                if not match.empty:
-                    emp = match.iloc[0]
-                    st.success(f"✅ تم العثور على سجل الموظف بنجاح في ({selected_comp_name})!")
-
-                    # --- 1. البيانات الوظيفية ---
-                    st.markdown("<h3 style='text-align:center;'>👤 البيانات الوظيفية</h3>", unsafe_allow_html=True)
-                    st.write("")
-                    
-                    col_top1, col_top2 = st.columns(2)
-                    with col_top1:
-                        st.markdown(f"""
-                            <div class="info-card-top">
-                                <div class="card-label">اسم الموظف</div>
-                                <div class="card-value">{emp.get('اسم الموظف', '-')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    with col_top2:
-                        st.markdown(f"""
-                            <div class="info-card-top">
-                                <div class="card-label">العنوان الوظيفي</div>
-                                <div class="card-value">{emp.get('عنوان وظيفي', '-')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-
-                    col_bot1, col_bot2 = st.columns(2)
-                    with col_bot1:
-                        st.markdown(f"""
-                            <div class="info-card-bottom">
-                                <div class="card-label">الدرجة الوظيفية</div>
-                                <div class="card-value">{emp.get('الدرجة الوظيفية', '-')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    with col_bot2:
-                        st.markdown(f"""
-                            <div class="info-card-bottom">
-                                <div class="card-label">المرحلة</div>
-                                <div class="card-value">{emp.get('المرحلة', '-')}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-
-                    st.markdown("---")
-
-                    # --- 2. تفاصيل ومفردات الراتب ---
-                    st.markdown("<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات الراتب</h3>", unsafe_allow_html=True)
-                    st.write("")
-                    
-                    col_earn, col_ded = st.columns(2)
-
-                    with col_earn:
-                        st.markdown("<h4 style='text-align:center; color:#1e3c72;'>📈 الاستحقاقات والبدلات</h4>", unsafe_allow_html=True)
-                        earn_data = {
-                            "مفردات الاستحقاق": [
-                                "الراتب الاسمي", "مخصصات الزوجية", "مخصصات الأطفال",
-                                "مخصصات المنصب", "مخصصات الشهادة", "موقع جغرافي",
-                                "مخصصات مهنية", "مخصصات هندسية", "مخصصات الخطورة",
-                                "الإضافات الأخرى"
-                            ],
-                            "المبلغ": [
-                                fmt(emp.get('الراتب الاسمي', 0)), fmt(emp.get('الزوجية', 0)),
-                                fmt(emp.get('الاطفال', 0)), fmt(emp.get('المنصب', 0)),
-                                fmt(emp.get('الشهادة', 0)), fmt(emp.get('موقع جغرافي', 0)),
-                                fmt(emp.get('مهنية', 0)), fmt(emp.get('الهندسية', 0)),
-                                fmt(emp.get('الخطورة', 0)), fmt(emp.get('الاضافات', 0))
-                            ]
-                        }
-                        df_earn = pd.DataFrame(earn_data)
-                        st.dataframe(df_earn, use_container_width=True, hide_index=True)
-                        
-                        st.info(f"**إجمالي الاستحقاقات (المجموع): {fmt(emp.get('المجموع', 0))}**")
-
-                    with col_ded:
-                        st.markdown("<h4 style='text-align:center; color:#780206;'>📉 الخصومات والاستقطاعات</h4>", unsafe_allow_html=True)
-                        ded_data = {
-                            "مفردات الاستقطاع": [
-                                "استقطاع التقاعد", "ضريبة الدخل",
-                                "الضمان الاجتماعي", "استقطاعات أخرى"
-                            ],
-                            "المبلغ": [
-                                fmt(emp.get('التقاعد', 0)), fmt(emp.get('الضريبة', 0)),
-                                fmt(emp.get('الضمان الاجتماعي', 0)), fmt(emp.get('الاستقطاعات', 0))
-                            ]
-                        }
-                        df_ded = pd.DataFrame(ded_data)
-                        st.dataframe(df_ded, use_container_width=True, hide_index=True)
-                        
-                        st.warning(f"**إجمالي الاستقطاعات: {fmt(emp.get('المجموع.1', 0))}**")
-
-                    # --- 3. الصافي ---
-                    st.markdown(f"""
-                        <div class="net-salary-box">
-                            <h2>💰 صافي الراتب المستحق للقبض</h2>
-                            <h1>{fmt(emp.get('الصافي', 0))}</h1>
-                        </div>
-                    """, unsafe_allow_html=True)
-
+                if 'الرقم الوظيفي' not in df.columns or 'كود الموظف' not in df.columns:
+                    st.error("خطأ في بنية ملف البيانات لهذه المؤسسة: يجب أن يحتوي الملف على عمودي 'الرقم الوظيفي' و 'كود الموظف'.")
                 else:
-                    st.error("❌ البيانات المدخلة غير صحيحة. يرجى التأكد من الرقم الوظيفي والكود الخاص والمؤسسة المختارة.")
+                    df['الرقم الوظيفي_str'] = df['الرقم الوظيفي'].astype(str).str.strip()
+                    df['كود الموظف_str'] = df['كود الموظف'].astype(str).str.strip()
+
+                    match = df[(df['الرقم الوظيفي_str'] == str(emp_id).strip()) & 
+                               (df['كود الموظف_str'] == str(secret_code).strip())]
+
+                    if not match.empty:
+                        emp = match.iloc[0]
+                        st.success(f"✅ تم العثور على سجل الموظف بنجاح في ({selected_comp_name})!")
+
+                        # البيانات الوظيفية
+                        st.markdown("<h3 style='text-align:center;'>👤 البيانات الوظيفية</h3>", unsafe_allow_html=True)
+                        st.write("")
+                        
+                        col_top1, col_top2 = st.columns(2)
+                        with col_top1:
+                            st.markdown(f"""
+                                <div class="info-card-top">
+                                    <div class="card-label">اسم الموظف</div>
+                                    <div class="card-value">{emp.get('اسم الموظف', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        with col_top2:
+                            st.markdown(f"""
+                                <div class="info-card-top">
+                                    <div class="card-label">العنوان الوظيفي</div>
+                                    <div class="card-value">{emp.get('عنوان وظيفي', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+
+                        col_bot1, col_bot2 = st.columns(2)
+                        with col_bot1:
+                            st.markdown(f"""
+                                <div class="info-card-bottom">
+                                    <div class="card-label">الدرجة الوظيفية</div>
+                                    <div class="card-value">{emp.get('الدرجة الوظيفية', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        with col_bot2:
+                            st.markdown(f"""
+                                <div class="info-card-bottom">
+                                    <div class="card-label">المرحلة</div>
+                                    <div class="card-value">{emp.get('المرحلة', '-')}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+
+                        st.markdown("---")
+
+                        # كشف المفردات
+                        st.markdown("<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات الراتب</h3>", unsafe_allow_html=True)
+                        st.write("")
+                        
+                        col_earn, col_ded = st.columns(2)
+
+                        with col_earn:
+                            st.markdown("<h4 style='text-align:center; color:#1e3c72;'>📈 الاستحقاقات والبدلات</h4>", unsafe_allow_html=True)
+                            earn_data = {
+                                "مفردات الاستحقاق": [
+                                    "الراتب الاسمي", "مخصصات الزوجية", "مخصصات الأطفال",
+                                    "مخصصات المنصب", "مخصصات الشهادة", "موقع جغرافي",
+                                    "مخصصات مهنية", "مخصصات هندسية", "مخصصات الخطورة",
+                                    "الإضافات الأخرى"
+                                ],
+                                "المبلغ": [
+                                    fmt(emp.get('الراتب الاسمي', 0)), fmt(emp.get('الزوجية', 0)),
+                                    fmt(emp.get('الاطفال', 0)), fmt(emp.get('المنصب', 0)),
+                                    fmt(emp.get('الشهادة', 0)), fmt(emp.get('موقع جغرافي', 0)),
+                                    fmt(emp.get('مهنية', 0)), fmt(emp.get('الهندسية', 0)),
+                                    fmt(emp.get('الخطورة', 0)), fmt(emp.get('الاضافات', 0))
+                                ]
+                            }
+                            df_earn = pd.DataFrame(earn_data)
+                            st.dataframe(df_earn, use_container_width=True, hide_index=True)
+                            
+                            st.info(f"**إجمالي الاستحقاقات (المجموع): {fmt(emp.get('المجموع', 0))}**")
+
+                        with col_ded:
+                            st.markdown("<h4 style='text-align:center; color:#780206;'>📉 الخصومات والاستقطاعات</h4>", unsafe_allow_html=True)
+                            ded_data = {
+                                "مفردات الاستقطاع": [
+                                    "استقطاع التقاعد", "ضريبة الدخل",
+                                    "الضمان الاجتماعي", "استقطاعات أخرى"
+                                ],
+                                "المبلغ": [
+                                    fmt(emp.get('التقاعد', 0)), fmt(emp.get('الضريبة', 0)),
+                                    fmt(emp.get('الضمان الاجتماعي', 0)), fmt(emp.get('الاستقطاعات', 0))
+                                ]
+                            }
+                            df_ded = pd.DataFrame(ded_data)
+                            st.dataframe(df_ded, use_container_width=True, hide_index=True)
+                            
+                            st.warning(f"**إجمالي الاستقطاعات: {fmt(emp.get('المجموع.1', 0))}**")
+
+                        # الصافي
+                        st.markdown(f"""
+                            <div class="net-salary-box">
+                                <h2>💰 صافي الراتب المستحق للقبض</h2>
+                                <h1>{fmt(emp.get('الصافي', 0))}</h1>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    else:
+                        st.error("❌ البيانات المدخلة غير صحيحة. يرجى التأكد من الرقم الوظيفي والكود الخاص والمؤسسة المختارة.")
 
 # =========================================================
 # الواجهة الثانية: لوحة تحكم إدارة مؤسسة
@@ -328,70 +326,73 @@ with tabs[0]:
 with tabs[1]:
     st.subheader("⚙️ لوحة إدارة كشف رواتب المؤسسة")
     
-    admin_comp_options = {v["name"]: k for k, v in companies.items()}
-    admin_selected_comp_name = st.selectbox("اختر المؤسسة التي تديرها:", list(admin_comp_options.keys()), key="admin_comp_select")
-    admin_comp_key = admin_comp_options[admin_selected_comp_name]
-    target_comp = companies[admin_comp_key]
+    if not companies:
+        st.warning("⚠️ لا توجد مؤسسات مسجلة في النظام بعد.")
+    else:
+        admin_comp_options = {v["name"]: k for k, v in companies.items()}
+        admin_selected_comp_name = st.selectbox("اختر المؤسسة التي تديرها:", list(admin_comp_options.keys()), key="admin_comp_select")
+        admin_comp_key = admin_comp_options[admin_selected_comp_name]
+        target_comp = companies[admin_comp_key]
 
-    admin_pass_input = st.text_input(f"أدخل كلمة مرور إدارة ({admin_selected_comp_name}):", type="password", key="admin_login_pass_multi")
+        admin_pass_input = st.text_input(f"أدخل كلمة مرور إدارة ({admin_selected_comp_name}):", type="password", key="admin_login_pass_multi")
 
-    if admin_pass_input == target_comp["password"]:
-        st.success(f"تم تسجيل الدخول بصلاحيات إدارة ({admin_selected_comp_name}) بنجاح.")
-        
-        admin_subtabs = st.tabs(["📤 رفع كشف الراتب الشهري", "🔐 تغيير كلمة مرور المؤسسة"])
+        if admin_pass_input == target_comp["password"]:
+            st.success(f"تم تسجيل الدخول بصلاحيات إدارة ({admin_selected_comp_name}) بنجاح.")
+            
+            admin_subtabs = st.tabs(["📤 رفع كشف الراتب الشهري", "🔐 تغيير كلمة مرور المؤسسة"])
 
-        # 1. رفع ملف خاص بالمؤسسة
-        with admin_subtabs[0]:
-            st.markdown(f"### 📤 رفع ملف الإكسل الشهري لـ ({admin_selected_comp_name})")
-            uploaded_excel = st.file_uploader("اختر ملف الإكسل (XLSX أو XLS)", type=["xlsx", "xls"], key="multi_uploader")
+            # 1. رفع ملف
+            with admin_subtabs[0]:
+                st.markdown(f"### 📤 رفع ملف الإكسل الشهري لـ ({admin_selected_comp_name})")
+                uploaded_excel = st.file_uploader("اختر ملف الإكسل (XLSX أو XLS)", type=["xlsx", "xls"], key="multi_uploader")
 
-            if uploaded_excel is not None:
-                try:
-                    new_df = pd.read_excel(uploaded_excel)
-                    new_df.columns = new_df.columns.astype(str).str.strip()
+                if uploaded_excel is not None:
+                    try:
+                        new_df = pd.read_excel(uploaded_excel)
+                        new_df.columns = new_df.columns.astype(str).str.strip()
 
-                    required_cols = ['الرقم الوظيفي', 'كود الموظف', 'اسم الموظف', 'الصافي']
-                    missing_cols = [c for c in required_cols if c not in new_df.columns]
+                        required_cols = ['الرقم الوظيفي', 'كود الموظف', 'اسم الموظف', 'الصافي']
+                        missing_cols = [c for c in required_cols if c not in new_df.columns]
 
-                    if missing_cols:
-                        st.error(f"❌ الملف المرفوع تنقصه الأعمدة التالية: {', '.join(missing_cols)}")
-                    else:
-                        new_df.to_excel(target_comp["data_file"], index=False)
-                        st.success(f"✅ تم تحديث كشف الرواتب الخاص بـ ({admin_selected_comp_name}) بنجاح!")
+                        if missing_cols:
+                            st.error(f"❌ الملف المرفوع تنقصه الأعمدة التالية: {', '.join(missing_cols)}")
+                        else:
+                            new_df.to_excel(target_comp["data_file"], index=False)
+                            st.success(f"✅ تم تحديث كشف الرواتب الخاص بـ ({admin_selected_comp_name}) بنجاح!")
 
-                        st.markdown("#### 📊 ملخص الكشف المرفوع:")
-                        stat_col1, stat_col2, stat_col3 = st.columns(3)
-                        stat_col1.metric("إجمالي الموظفين", len(new_df))
-                        stat_col2.metric("إجمالي الرواتب الصافية", fmt(new_df['الصافي'].sum()))
-                        stat_col3.metric("متوسط صافي الراتب", fmt(new_df['الصافي'].mean()))
+                            st.markdown("#### 📊 ملخص الكشف المرفوع:")
+                            stat_col1, stat_col2, stat_col3 = st.columns(3)
+                            stat_col1.metric("إجمالي الموظفين", len(new_df))
+                            stat_col2.metric("إجمالي الرواتب الصافية", fmt(new_df['الصافي'].sum()))
+                            stat_col3.metric("متوسط صافي الراتب", fmt(new_df['الصافي'].mean()))
 
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
 
-        # 2. تغيير كلمة المرور للمؤسسة الحالية
-        with admin_subtabs[1]:
-            st.markdown(f"### 🔐 تغيير كلمة مرور إدارة ({admin_selected_comp_name})")
+            # 2. تغيير كلمة المرور
+            with admin_subtabs[1]:
+                st.markdown(f"### 🔐 تغيير كلمة مرور إدارة ({admin_selected_comp_name})")
 
-            with st.form("change_comp_pass_form"):
-                new_pass = st.text_input("كلمة المرور الجديدة:", type="password")
-                confirm_pass = st.text_input("تأكيد كلمة المرور الجديدة:", type="password")
-                submit_pass = st.form_submit_button("💾 حفظ كلمة المرور")
+                with st.form("change_comp_pass_form"):
+                    new_pass = st.text_input("كلمة المرور الجديدة:", type="password")
+                    confirm_pass = st.text_input("تأكيد كلمة المرور الجديدة:", type="password")
+                    submit_pass = st.form_submit_button("💾 حفظ كلمة المرور")
 
-                if submit_pass:
-                    if not new_pass:
-                        st.error("يرجى إدخال كلمة مرور جديدة.")
-                    elif new_pass != confirm_pass:
-                        st.error("كلمتا المرور غير متطابقتين.")
-                    else:
-                        companies[admin_comp_key]["password"] = new_pass
-                        save_companies(companies)
-                        st.success("✅ تم تحديث كلمة المرور الخاصة بالمؤسسة بنجاح!")
+                    if submit_pass:
+                        if not new_pass:
+                            st.error("يرجى إدخال كلمة مرور جديدة.")
+                        elif new_pass != confirm_pass:
+                            st.error("كلمتا المرور غير متطابقتين.")
+                        else:
+                            companies[admin_comp_key]["password"] = new_pass
+                            save_companies(companies)
+                            st.success("✅ تم تحديث كلمة المرور الخاصة بالمؤسسة بنجاح!")
 
-    elif admin_pass_input != "":
-        st.error("كلمة المرور غير صحيحة.")
+        elif admin_pass_input != "":
+            st.error("كلمة المرور غير صحيحة.")
 
 # =========================================================
-# الواجهة الثالثة: إضافة مؤسسة جديدة (خاصة بمدير النظام الرئيسي)
+# الواجهة الثالثة: إضافة مؤسسة جديدة (Super Admin)
 # =========================================================
 with tabs[2]:
     st.subheader("➕ تسجيل وإضافة مؤسسة جديدة للنظام")
@@ -399,7 +400,6 @@ with tabs[2]:
 
     master_pass_input = st.text_input("أدخل كلمة مرور مدير النظام العام:", type="password", key="master_pass")
     
-    # كلمة مرور مدير النظام العام لإنشاء شركات جديدة
     MASTER_PASSWORD = "SuperAdmin@Salary2026"
 
     if master_pass_input == MASTER_PASSWORD:
@@ -428,3 +428,34 @@ with tabs[2]:
 
     elif master_pass_input != "":
         st.error("كلمة مرور مدير النظام العام غير صحيحة.")
+
+# =========================================================
+# الواجهة الرابعة: حذف مؤسسة (Super Admin)
+# =========================================================
+with tabs[3]:
+    st.subheader("🗑️ حذف مؤسسة من النظام")
+    
+    master_pass_del = st.text_input("أدخل كلمة مرور مدير النظام العام للتحقق:", type="password", key="master_pass_del")
+    
+    if master_pass_del == "SuperAdmin@Salary2026":
+        if not companies:
+            st.info("لا توجد مؤسسات مضافة حالياً لحذفها.")
+        else:
+            del_comp_options = {v["name"]: k for k, v in companies.items()}
+            del_selected_name = st.selectbox("اختر المؤسسة المراد حذفها نهائياً:", list(del_comp_options.keys()))
+            del_key = del_comp_options[del_selected_name]
+
+            if st.button("🚨 حذف المؤسسة وكشف رواتبها نهائياً", type="primary"):
+                # حذف ملف البيانات إن وجد
+                file_to_del = companies[del_key].get("data_file")
+                if file_to_del and os.path.exists(file_to_del):
+                    try:
+                        os.remove(file_to_del)
+                    except:
+                        pass
+                
+                # حذف من السجل
+                del companies[del_key]
+                save_companies(companies)
+                st.success(f"✅ تم حذف مؤسسة ({del_selected_name}) وكافة بياناتها بنجاح!")
+                st.rerun()
