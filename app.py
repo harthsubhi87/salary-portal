@@ -2,18 +2,25 @@ import streamlit as st
 import pandas as pd
 import os
 import json
+import time
 
 # ---------------------------------------------------------
-# 1. إعدادات الصفحة والتصميم
+# 1. إعدادات الصفحة وتصميم يدعم تطبيقات الهواتف (PWA Ready)
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="بوابة استعلام الرواتب لعدة مؤسسات",
+    page_title="تطبيق استعلام الرواتب",
     page_icon="💳",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
+# إضافة ميتا لتطبيقات الهواتف المباشرة وتنسيقات الـ UI
 st.markdown("""
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    </head>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
     
@@ -28,7 +35,7 @@ st.markdown("""
     }
 
     .block-container {
-        padding-top: 1.8rem;
+        padding-top: 1.5rem;
         padding-bottom: 3rem;
         max-width: 950px !important;
         margin: 0 auto;
@@ -37,23 +44,23 @@ st.markdown("""
     .main-blue-header {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
-        padding: 22px 20px;
+        padding: 20px 15px;
         border-radius: 16px;
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
     }
     .main-blue-header h1 {
         color: #ffffff !important;
         font-weight: 800;
-        font-size: 26px;
+        font-size: 24px;
         margin: 0;
         text-align: center;
     }
     .main-blue-header p {
         color: #e2e8f0;
         margin-top: 6px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 400;
         text-align: center;
     }
@@ -118,7 +125,6 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* تصميم الرسائل التنبيهية التفاعلية بأسلوب الألوان المائية */
     .custom-alert-success {
         background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
         border-right: 6px solid #059669;
@@ -156,10 +162,9 @@ st.markdown("""
 COMPANIES_FILE = "companies.json"
 
 # ---------------------------------------------------------
-# 2. إدارة قاعدة بيانات المؤسسات والرواتب
+# 2. إدارة قاعدة البيانات
 # ---------------------------------------------------------
 def load_companies():
-    """تحميل سجل المؤسسات والشركات المعتمدة"""
     if os.path.exists(COMPANIES_FILE):
         try:
             with open(COMPANIES_FILE, "r", encoding="utf-8") as f:
@@ -173,12 +178,10 @@ def load_companies():
     return {}
 
 def save_companies(companies_dict):
-    """حفظ سجل المؤسسات"""
     with open(COMPANIES_FILE, "w", encoding="utf-8") as f:
         json.dump(companies_dict, f, ensure_ascii=False, indent=4)
 
 def load_company_data(data_file_path):
-    """تحميل بيانات كشف راتب لمؤسسة معينة"""
     if os.path.exists(data_file_path):
         try:
             df = pd.read_excel(data_file_path)
@@ -203,14 +206,14 @@ def fmt(val):
 
 st.markdown("""
     <div class="main-blue-header">
-        <h1>💳 بوابة استعلام مفردات الراتب الشهري</h1>
+        <h1>💳 تطبيق استعلام مفردات الراتب الشهري</h1>
         <p>النظام الموحد لاستعلام الرواتب لكافة المؤسسات والشركات</p>
     </div>
 """, unsafe_allow_html=True)
 
 companies = load_companies()
 
-tabs = st.tabs(["🔒 استعلام الموظف", "⚙️️ لوحة تحكم إدارة المؤسسات", "➕ إضافة مؤسسة جديدة", "🗑️ حذف مؤسسة"])
+tabs = st.tabs(["🔒 استعلام الموظف", "⚙️ إدارة المؤسسات", "➕ إضافة مؤسسة", "🗑️ حذف مؤسسة"])
 
 # =========================================================
 # الواجهة الأولى: استعلام الموظف
@@ -219,7 +222,7 @@ with tabs[0]:
     st.subheader("🔑 إدخال بيانات الاستعلام")
     
     if not companies:
-        st.info("ℹ️ لا توجد مؤسسات أو شركات مضافة في النظام حالياً. يرجى من مدير النظام إضافة مؤسسة من تبويب (➕ إضافة مؤسسة جديدة).")
+        st.info("ℹ️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب (➕ إضافة مؤسسة).")
     else:
         comp_options = {v["name"]: k for k, v in companies.items()}
         selected_comp_name = st.selectbox("اختر المؤسسة / الشركة التابع لها:", list(comp_options.keys()))
@@ -316,7 +319,7 @@ with tabs[0]:
                             df_earn = pd.DataFrame(earn_data)
                             st.dataframe(df_earn, use_container_width=True, hide_index=True)
                             
-                            st.info(f"**إجمالي الاستحقاقات (المجموع): {fmt(emp.get('المجموع', 0))}**")
+                            st.info(f"**إجمالي الاستحقاقات: {fmt(emp.get('المجموع', 0))}**")
 
                         with col_ded:
                             st.markdown("<h4 style='text-align:center; color:#780206;'>📉 الخصومات والاستقطاعات</h4>", unsafe_allow_html=True)
@@ -415,14 +418,13 @@ with tabs[1]:
             st.error("كلمة المرور غير صحيحة.")
 
 # =========================================================
-# الواجهة الثالثة: إضافة مؤسسة جديدة (Super Admin)
+# الواجهة الثالثة: إضافة مؤسسة جديدة
 # =========================================================
 with tabs[2]:
     st.subheader("➕ تسجيل وإضافة مؤسسة جديدة للنظام")
     st.info("يتطلب إضافة مؤسسة جديدة إدخال كلمة مرور مدير النظام العام (Super Admin Master Password).")
 
     master_pass_input = st.text_input("أدخل كلمة مرور مدير النظام العام:", type="password", key="master_pass")
-    
     MASTER_PASSWORD = "SuperAdmin@Salary2026"
 
     if master_pass_input == MASTER_PASSWORD:
@@ -437,7 +439,6 @@ with tabs[2]:
                 if not new_comp_name or not new_comp_pass:
                     st.error("يرجى تعبئة جميع الحقول المطلوبة.")
                 else:
-                    import time
                     new_key = f"comp_{int(time.time())}"
                     new_data_file = f"Salary_{new_key}.xlsx"
 
@@ -448,11 +449,10 @@ with tabs[2]:
                     }
                     save_companies(companies)
                     
-                    # عرض الرسالة الاحترافية الملونة بنجاح الإضافة
                     st.markdown(f"""
                         <div class="custom-alert-success">
                             <h3>🎉 تم إضافة المؤسسة بنجاح!</h3>
-                            <p>تم اعتماد مؤسسة <b>({new_comp_name})</b> وإضافتها لدليل النظام الموحد. يمكن لمديرها الآن رفع كشوفات الموظفين مباشرة.</p>
+                            <p>تم اعتماد مؤسسة <b>({new_comp_name})</b> وإضافتها لدليل النظام الموحد.</p>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -460,7 +460,7 @@ with tabs[2]:
         st.error("كلمة مرور مدير النظام العام غير صحيحة.")
 
 # =========================================================
-# الواجهة الرابعة: حذف مؤسسة (Super Admin)
+# الواجهة الرابعة: حذف مؤسسة
 # =========================================================
 with tabs[3]:
     st.subheader("🗑️ حذف مؤسسة من النظام")
@@ -486,10 +486,9 @@ with tabs[3]:
                 del companies[del_key]
                 save_companies(companies)
                 
-                # عرض الرسالة الاحترافية الملونة للحذف
                 st.markdown(f"""
                     <div class="custom-alert-danger">
                         <h3>🗑️ تم حذف المؤسسة بنجاح</h3>
-                        <p>تم إزالة <b>({del_selected_name})</b> وكافة بيانات رواتب الموظفين الخاصة بها من النظام نهائياً.</p>
+                        <p>تم إزالة <b>({del_selected_name})</b> وكافة بياناتها نهائياً.</p>
                     </div>
                 """, unsafe_allow_html=True)
