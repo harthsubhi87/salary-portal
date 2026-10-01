@@ -118,6 +118,35 @@ st.markdown("""
         text-align: center !important;
     }
 
+    /* تصميم الرسائل التنبيهية التفاعلية بأسلوب الألوان المائية */
+    .custom-alert-success {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-right: 6px solid #059669;
+        color: #065f46;
+        padding: 18px 22px;
+        border-radius: 14px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);
+        text-align: center;
+    }
+    .custom-alert-success h3 { color: #065f46 !important; margin: 0 0 5px 0; font-size: 20px; font-weight: 800; }
+    .custom-alert-success p { margin: 0; font-size: 15px; font-weight: 600; }
+
+    .custom-alert-danger {
+        background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
+        border-right: 6px solid #e11d48;
+        color: #9f1239;
+        padding: 18px 22px;
+        border-radius: 14px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(225, 29, 72, 0.15);
+        text-align: center;
+    }
+    .custom-alert-danger h3 { color: #9f1239 !important; margin: 0 0 5px 0; font-size: 20px; font-weight: 800; }
+    .custom-alert-danger p { margin: 0; font-size: 15px; font-weight: 600; }
+
     .stTabs [data-baseweb="tab-list"] {
         justify-content: center;
     }
@@ -135,7 +164,6 @@ def load_companies():
         try:
             with open(COMPANIES_FILE, "r", encoding="utf-8") as f:
                 companies = json.load(f)
-                # إزالة المؤسسة الافتراضية القديمة إن وجدت
                 if "comp_default" in companies:
                     del companies["comp_default"]
                     save_companies(companies)
@@ -182,7 +210,7 @@ st.markdown("""
 
 companies = load_companies()
 
-tabs = st.tabs(["🔒 استعلام الموظف", "⚙️ لوحة تحكم إدارة المؤسسات", "➕ إضافة مؤسسة جديدة", "🗑️ حذف مؤسسة"])
+tabs = st.tabs(["🔒 استعلام الموظف", "⚙️️ لوحة تحكم إدارة المؤسسات", "➕ إضافة مؤسسة جديدة", "🗑️ حذف مؤسسة"])
 
 # =========================================================
 # الواجهة الأولى: استعلام الموظف
@@ -226,7 +254,6 @@ with tabs[0]:
                         emp = match.iloc[0]
                         st.success(f"✅ تم العثور على سجل الموظف بنجاح في ({selected_comp_name})!")
 
-                        # البيانات الوظيفية
                         st.markdown("<h3 style='text-align:center;'>👤 البيانات الوظيفية</h3>", unsafe_allow_html=True)
                         st.write("")
                         
@@ -264,7 +291,6 @@ with tabs[0]:
 
                         st.markdown("---")
 
-                        # كشف المفردات
                         st.markdown("<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات الراتب</h3>", unsafe_allow_html=True)
                         st.write("")
                         
@@ -309,7 +335,6 @@ with tabs[0]:
                             
                             st.warning(f"**إجمالي الاستقطاعات: {fmt(emp.get('المجموع.1', 0))}**")
 
-                        # الصافي
                         st.markdown(f"""
                             <div class="net-salary-box">
                                 <h2>💰 صافي الراتب المستحق للقبض</h2>
@@ -341,7 +366,6 @@ with tabs[1]:
             
             admin_subtabs = st.tabs(["📤 رفع كشف الراتب الشهري", "🔐 تغيير كلمة مرور المؤسسة"])
 
-            # 1. رفع ملف
             with admin_subtabs[0]:
                 st.markdown(f"### 📤 رفع ملف الإكسل الشهري لـ ({admin_selected_comp_name})")
                 uploaded_excel = st.file_uploader("اختر ملف الإكسل (XLSX أو XLS)", type=["xlsx", "xls"], key="multi_uploader")
@@ -369,7 +393,6 @@ with tabs[1]:
                     except Exception as e:
                         st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
 
-            # 2. تغيير كلمة المرور
             with admin_subtabs[1]:
                 st.markdown(f"### 🔐 تغيير كلمة مرور إدارة ({admin_selected_comp_name})")
 
@@ -414,7 +437,8 @@ with tabs[2]:
                 if not new_comp_name or not new_comp_pass:
                     st.error("يرجى تعبئة جميع الحقول المطلوبة.")
                 else:
-                    new_key = f"comp_{len(companies) + 1}"
+                    import time
+                    new_key = f"comp_{int(time.time())}"
                     new_data_file = f"Salary_{new_key}.xlsx"
 
                     companies[new_key] = {
@@ -423,8 +447,14 @@ with tabs[2]:
                         "data_file": new_data_file
                     }
                     save_companies(companies)
-                    st.success(f"🎉 تم إضافة مؤسسة ({new_comp_name}) بنجاح! يمكن لمديرها الآن الدخول ورفع كشف رواتبه.")
-                    st.rerun()
+                    
+                    # عرض الرسالة الاحترافية الملونة بنجاح الإضافة
+                    st.markdown(f"""
+                        <div class="custom-alert-success">
+                            <h3>🎉 تم إضافة المؤسسة بنجاح!</h3>
+                            <p>تم اعتماد مؤسسة <b>({new_comp_name})</b> وإضافتها لدليل النظام الموحد. يمكن لمديرها الآن رفع كشوفات الموظفين مباشرة.</p>
+                        </div>
+                    """, unsafe_allow_html=True)
 
     elif master_pass_input != "":
         st.error("كلمة مرور مدير النظام العام غير صحيحة.")
@@ -446,7 +476,6 @@ with tabs[3]:
             del_key = del_comp_options[del_selected_name]
 
             if st.button("🚨 حذف المؤسسة وكشف رواتبها نهائياً", type="primary"):
-                # حذف ملف البيانات إن وجد
                 file_to_del = companies[del_key].get("data_file")
                 if file_to_del and os.path.exists(file_to_del):
                     try:
@@ -454,8 +483,13 @@ with tabs[3]:
                     except:
                         pass
                 
-                # حذف من السجل
                 del companies[del_key]
                 save_companies(companies)
-                st.success(f"✅ تم حذف مؤسسة ({del_selected_name}) وكافة بياناتها بنجاح!")
-                st.rerun()
+                
+                # عرض الرسالة الاحترافية الملونة للحذف
+                st.markdown(f"""
+                    <div class="custom-alert-danger">
+                        <h3>🗑️ تم حذف المؤسسة بنجاح</h3>
+                        <p>تم إزالة <b>({del_selected_name})</b> وكافة بيانات رواتب الموظفين الخاصة بها من النظام نهائياً.</p>
+                    </div>
+                """, unsafe_allow_html=True)
