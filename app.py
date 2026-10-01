@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# تصميم وتنسيقات CSS بلغة الألوان المائية الحضرية (Pastel & Modern Gradients)
+# تصميم وتنسيقات CSS مع توسيط النصوص والبيانات في منتصف المربعات
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
@@ -51,52 +51,58 @@ st.markdown("""
         font-weight: 800;
         font-size: 26px;
         margin: 0;
+        text-align: center;
     }
     .main-blue-header p {
         color: #e2e8f0;
         margin-top: 6px;
         font-size: 15px;
         font-weight: 400;
+        text-align: center;
     }
 
-    /* كروت البيانات الوظيفية بألوان مائية هادئة (Soft Watercolors) */
+    /* كروت البيانات الوظيفية بألوان مائية هادئة مع توسيط النص تماماً بمنتصف الحقل */
     .info-card-top {
         background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-        border-right: 5px solid #0284c7;
+        border-top: 4px solid #0284c7;
         border-radius: 14px;
         padding: 16px 20px;
         margin-bottom: 15px;
+        text-align: center !important;
         box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
     }
     
     .info-card-bottom {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-right: 5px solid #16a34a;
+        border-top: 4px solid #16a34a;
         border-radius: 14px;
         padding: 16px 20px;
         margin-bottom: 20px;
+        text-align: center !important;
         box-shadow: 0 4px 12px rgba(22, 163, 74, 0.08);
     }
 
     .card-label {
-        font-size: 13px;
+        font-size: 14px;
         color: #475569;
-        font-weight: 600;
-        margin-bottom: 3px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        text-align: center !important;
     }
     .card-value {
-        font-size: 17px;
+        font-size: 18px;
         color: #0f172a;
         font-weight: 800;
+        text-align: center !important;
     }
 
-    /* بطاقة صافي الراتب المستحق في منتصف الورقة بألوان مائية مميزة */
+    /* بطاقة صافي الراتب المستحق في منتصف الورقة */
     .net-salary-box {
         background: linear-gradient(135deg, #d8b4fe 0%, #818cf8 50%, #34d399 100%);
         color: white;
         border-radius: 18px;
         padding: 24px;
-        text-align: center;
+        text-align: center !important;
         box-shadow: 0 8px 25px rgba(129, 140, 248, 0.3);
         margin: 25px auto 15px auto;
         max-width: 600px;
@@ -106,6 +112,7 @@ st.markdown("""
         margin: 0;
         font-size: 19px;
         font-weight: 700;
+        text-align: center !important;
     }
     .net-salary-box h1 {
         color: #ffffff !important;
@@ -113,6 +120,7 @@ st.markdown("""
         font-size: 36px;
         font-weight: 800;
         letter-spacing: 0.5px;
+        text-align: center !important;
     }
 
     /* تنسيقات التبويبات والأزرار */
@@ -213,8 +221,9 @@ with tabs[0]:
                         emp = match.iloc[0]
                         st.success(f"✅ تم العثور على سجل الموظف بنجاح!")
 
-                        # --- 1. بطاقات اسم الموظف والعنوان الوظيفي في الأعلى ---
-                        st.markdown("### 👤 البيانات الوظيفية")
+                        # --- 1. بطاقات اسم الموظف والعنوان الوظيفي تمركز بمنتصف الحقل ---
+                        st.markdown("<h3 style='text-align:center;'>👤 البيانات الوظيفية</h3>", unsafe_allow_html=True)
+                        st.write("")
                         
                         col_top1, col_top2 = st.columns(2)
                         with col_top1:
@@ -232,7 +241,7 @@ with tabs[0]:
                                 </div>
                             """, unsafe_allow_html=True)
 
-                        # --- 2. وتحتها مباشرة الدرجة الوظيفية والمرحلة ---
+                        # --- 2. وتحتها مباشرة الدرجة الوظيفية والمرحلة تمركز بمنتصف الحقل ---
                         col_bot1, col_bot2 = st.columns(2)
                         with col_bot1:
                             st.markdown(f"""
@@ -252,12 +261,13 @@ with tabs[0]:
                         st.markdown("---")
 
                         # --- 3. الجداول المنظمة للاستحقاقات والخصومات ---
-                        st.markdown("### 📋 كشف تفاصيل ومفردات الراتب")
+                        st.markdown("<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات الراتب</h3>", unsafe_allow_html=True)
+                        st.write("")
                         
                         col_earn, col_ded = st.columns(2)
 
                         with col_earn:
-                            st.markdown("#### 📈 الاستحقاقات والبدلات")
+                            st.markdown("<h4 style='text-align:center; color:#1e3c72;'>📈 الاستحقاقات والبدلات</h4>", unsafe_allow_html=True)
                             earn_data = {
                                 "مفردات الاستحقاق": [
                                     "الراتب الاسمي", "مخصصات الزوجية", "مخصصات الأطفال",
@@ -279,7 +289,7 @@ with tabs[0]:
                             st.info(f"**إجمالي الاستحقاقات (المجموع): {fmt(emp.get('المجموع', 0))}**")
 
                         with col_ded:
-                            st.markdown("#### 📉 الخصومات والاستقطاعات")
+                            st.markdown("<h4 style='text-align:center; color:#780206;'>📉 الخصومات والاستقطاعات</h4>", unsafe_allow_html=True)
                             ded_data = {
                                 "مفردات الاستقطاع": [
                                     "استقطاع التقاعد", "ضريبة الدخل",
