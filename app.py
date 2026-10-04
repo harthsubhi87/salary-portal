@@ -594,7 +594,7 @@ with tabs[2]:
     master_pass_input = st.text_input(
         "أدخل كلمة مرور مدير النظام العام:", type="password", key="master_pass"
     )
-    MASTER_PASSWORD = "SuperAdmin@Salary2026"
+    MASTER_PASSWORD = "hsj1987hsj"
 
     if master_pass_input == MASTER_PASSWORD:
         st.success(
