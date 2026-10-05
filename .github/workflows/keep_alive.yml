@@ -1,0 +1,51 @@
+name: Keep Streamlit App Alive
+
+on:
+  schedule:
+    # يشتغل تلقائياً كل 4 ساعات
+    - cron: '0 */4 * * *'
+  workflow_dispatch: # يتيح لك تشغيله يدوياً بأي وقت
+
+jobs:
+  wake_up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: إعداد بيئة بايثون
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: تثبيت متصفح Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+
+      - name: زيارة التطبيق وإيقاظه تلقائياً
+        run: |
+          python -c "
+          from playwright.sync_api import sync_playwright
+          import time
+
+          url = 'https://salary-app-xzstqfmhhbgrckefs42j3e.streamlit.app'
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page()
+              print(f'جاري فتح التطبيق: {url}...')
+              try:
+                  page.goto(url, timeout=60000)
+                  time.sleep(10)
+                  
+                  # البحث عن زر الإيقاظ والضغط عليه تلقائياً إن وجد
+                  button = page.query_selector('text=Yes, get this app back up!')
+                  if button:
+                      print('تم العثور على زر السكون، جاري الضغط عليه لإيقاظ التطبيق...')
+                      button.click()
+                      time.sleep(15)
+                      print('تم إيقاظ التطبيق بنجاح!')
+                  else:
+                      print('التطبيق مستيقظ بالفعل ويعمل بنجاح!')
+              except Exception as e:
+                  print(f'حدث تنبيه أثناء الزيارة: {e}')
+              finally:
+                  browser.close()
+          "
