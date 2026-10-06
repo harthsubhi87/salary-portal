@@ -3,5 +3,10 @@
         "name": "مديرية بلدية النخيب",
         "password": "harth",
         "data_file": "Salary_comp_1791284732.xlsx"
+    },
+    "comp_1791284744": {
+        "name": "مديرية بلدية هيت",
+        "password": "heet",
+        "data_file": "Salary_comp_1791284744.xlsx"
     }
 }
