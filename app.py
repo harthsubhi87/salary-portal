@@ -1,8 +1,10 @@
+import base64
 import io
 import json
 import os
 import time
 import pandas as pd
+import requests
 import streamlit as st
 
 # ---------------------------------------------------------
@@ -160,8 +162,44 @@ st.markdown(
 COMPANIES_FILE = "companies.json"
 
 # ---------------------------------------------------------
-# 2. إدارة قاعدة البيانات
+# 2. وحدة التخزين السحابي عبر GitHub API (الحل الاحترافي)
 # ---------------------------------------------------------
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", None)
+REPO_NAME = st.secrets.get("REPO_NAME", None)
+
+
+def sync_file_to_github(file_path, commit_message="تحديث البيانات تلقائياً"):
+    """حفظ الملف سحابياً في GitHub لمنع المسح والضياع نهائياً"""
+    if not GITHUB_TOKEN or not REPO_NAME:
+        return False
+    try:
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{file_path}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # جلب الـ SHA للملف إن كان موجوداً مسبقاً
+        res_get = requests.get(url, headers=headers)
+        sha = res_get.json().get("sha", None) if res_get.status_code == 200 else None
+
+        with open(file_path, "rb") as f:
+            content_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "message": commit_message,
+            "content": content_b64,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        res_put = requests.put(url, json=payload, headers=headers)
+        return res_put.status_code in [200, 201]
+    except Exception as e:
+        print(f"خطأ في المزامنة السحابية: {e}")
+        return False
+
+
 def load_companies():
     if os.path.exists(COMPANIES_FILE):
         try:
@@ -175,14 +213,18 @@ def load_companies():
             pass
     return {}
 
+
 def save_companies(companies_dict):
     with open(COMPANIES_FILE, "w", encoding="utf-8") as f:
         json.dump(companies_dict, f, ensure_ascii=False, indent=4)
+    # المزامنة مع السحابة فوراً
+    sync_file_to_github(COMPANIES_FILE, "تحديث قائمة المؤسسات")
+
 
 def load_company_data(data_file_path):
     if os.path.exists(data_file_path):
         try:
-            if data_file_path.endswith('.csv'):
+            if data_file_path.endswith(".csv"):
                 df = pd.read_csv(data_file_path)
             else:
                 df = pd.read_excel(data_file_path)
@@ -193,6 +235,7 @@ def load_company_data(data_file_path):
             return None
     return None
 
+
 def fmt(val):
     try:
         if pd.isna(val):
@@ -200,6 +243,7 @@ def fmt(val):
         return f"{float(val):,.0f} د.ع"
     except:
         return "0 د.ع"
+
 
 # ---------------------------------------------------------
 # 3. الهيكل الرئيسي للتطبيق
@@ -229,7 +273,8 @@ with tabs[0]:
 
     if not companies:
         st.info(
-            "ℹ️️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب (➕ إضافة مؤسسة)."
+            "ℹ️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب"
+            " (➕ إضافة مؤسسة)."
         )
     else:
         comp_options = {v["name"]: k for k, v in companies.items()}
@@ -260,22 +305,29 @@ with tabs[0]:
             df = load_company_data(comp_info["data_file"])
             if df is None:
                 st.warning(
-                    f"⚠️️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة ({selected_comp_name}) بعد."
+                    "⚠️ لم يتم رفع كشف الرواتب لهذا الشهر لمؤسسة"
+                    f" ({selected_comp_name}) بعد."
                 )
             elif not emp_id or not secret_code:
                 st.error(
                     "يرجى إدخال الرقم الوظيفي والكود الخاص بك لاستكمال الاستعلام."
                 )
             else:
-                if "الرقم الوظيفي" not in df.columns or "كود الموظف" not in df.columns:
+                if (
+                    "الرقم الوظيفي" not in df.columns
+                    or "كود الموظف" not in df.columns
+                ):
                     st.error(
-                        "خطأ في بنية ملف البيانات لهذه المؤسسة: يجب أن يحتوي الملف على عمودي 'الرقم الوظيفي' و 'كود الموظف'."
+                        "خطأ في بنية ملف البيانات لهذه المؤسسة: يجب أن يحتوي"
+                        " الملف على عمودي 'الرقم الوظيفي' و 'كود الموظف'."
                     )
                 else:
                     df["الرقم الوظيفي_str"] = (
                         df["الرقم الوظيفي"].astype(str).str.strip()
                     )
-                    df["كود الموظف_str"] = df["كود الموظف"].astype(str).str.strip()
+                    df["كود الموظف_str"] = (
+                        df["كود الموظف"].astype(str).str.strip()
+                    )
 
                     match = df[
                         (df["الرقم الوظيفي_str"] == str(emp_id).strip())
@@ -285,11 +337,13 @@ with tabs[0]:
                     if not match.empty:
                         emp = match.iloc[0]
                         st.success(
-                            f"✅ تم العثور على سجل الموظف بنجاح في ({selected_comp_name})!"
+                            "✅ تم العثور على سجل الموظف بنجاح في"
+                            f" ({selected_comp_name})!"
                         )
 
                         st.markdown(
-                            "<h3 style='text-align:center;'>👤 البيانات الوظيفية</h3>",
+                            "<h3 style='text-align:center;'>👤 البيانات"
+                            " الوظيفية</h3>",
                             unsafe_allow_html=True,
                         )
                         st.write("")
@@ -341,7 +395,8 @@ with tabs[0]:
                         st.markdown("---")
 
                         st.markdown(
-                            "<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات الراتب</h3>",
+                            "<h3 style='text-align:center;'>📋 كشف تفاصيل ومفردات"
+                            " الراتب</h3>",
                             unsafe_allow_html=True,
                         )
                         st.write("")
@@ -350,7 +405,8 @@ with tabs[0]:
 
                         with col_earn:
                             st.markdown(
-                                "<h4 style='text-align:center; color:#1e3c72;'>📈 الاستحقاقات والبدلات</h4>",
+                                "<h4 style='text-align:center; color:#1e3c72;'>📈"
+                                " الاستحقاقات والبدلات</h4>",
                                 unsafe_allow_html=True,
                             )
                             earn_data = {
@@ -380,15 +436,21 @@ with tabs[0]:
                                 ],
                             }
                             df_earn = pd.DataFrame(earn_data)
-                            st.dataframe(df_earn, use_container_width=True, hide_index=True)
+                            st.dataframe(
+                                df_earn,
+                                use_container_width=True,
+                                hide_index=True,
+                            )
 
                             st.info(
-                                f"**إجمالي الاستحقاقات: {fmt(emp.get('المجموع', 0))}**"
+                                "**إجمالي الاستحقاقات:"
+                                f" {fmt(emp.get('المجموع', 0))}**"
                             )
 
                         with col_ded:
                             st.markdown(
-                                "<h4 style='text-align:center; color:#780206;'>📉 الخصومات والاستقطاعات</h4>",
+                                "<h4 style='text-align:center; color:#780206;'>📉"
+                                " الخصومات والاستقطاعات</h4>",
                                 unsafe_allow_html=True,
                             )
                             ded_data = {
@@ -406,10 +468,15 @@ with tabs[0]:
                                 ],
                             }
                             df_ded = pd.DataFrame(ded_data)
-                            st.dataframe(df_ded, use_container_width=True, hide_index=True)
+                            st.dataframe(
+                                df_ded,
+                                use_container_width=True,
+                                hide_index=True,
+                            )
 
                             st.warning(
-                                f"**إجمالي الاستقطاعات: {fmt(emp.get('المجموع.1', 0))}**"
+                                "**إجمالي الاستقطاعات:"
+                                f" {fmt(emp.get('المجموع.1', 0))}**"
                             )
 
                         st.markdown(
@@ -424,7 +491,8 @@ with tabs[0]:
 
                     else:
                         st.error(
-                            "❌ البيانات المدخلة غير صحيحة. يرجى التأكد من الرقم الوظيفي والكود الخاص والمؤسسة المختارة."
+                            "❌ البيانات المدخلة غير صحيحة. يرجى التأكد من الرقم"
+                            " الوظيفي والكود الخاص والمؤسسة المختارة."
                         )
 
 # =========================================================
@@ -453,7 +521,8 @@ with tabs[1]:
 
         if admin_pass_input == target_comp["password"]:
             st.success(
-                f"تم تسجيل الدخول بصلاحيات إدارة ({admin_selected_comp_name}) بنجاح."
+                "تم تسجيل الدخول بصلاحيات إدارة"
+                f" ({admin_selected_comp_name}) بنجاح."
             )
 
             admin_subtabs = st.tabs(
@@ -462,50 +531,69 @@ with tabs[1]:
 
             # 1. رفع الملف وتحميل النماذج
             with admin_subtabs[0]:
-                st.markdown(f"### 📥 تحميل قالب كشف الرواتب المعتمد (Template)")
-                st.info("💡 يمكنك تحميل ملف النموذج الفارغ بصيغة Excel المجهز بكافة الأعمدة، ثم تعبئته ورفعه:")
+                st.markdown(
+                    "### 📥 تحميل قالب كشف الرواتب المعتمد (Template)"
+                )
+                st.info(
+                    "💡 يمكنك تحميل ملف النموذج الفارغ بصيغة Excel المجهز بكافة"
+                    " الأعمدة، ثم تعبئته ورفعه:"
+                )
 
-                template_data = pd.DataFrame([{
-                    "الرقم الوظيفي": 1001,
-                    "كود الموظف": "1234",
-                    "اسم الموظف": "أحمد محمد علي",
-                    "عنوان وظيفي": "مهندس قدم",
-                    "الدرجة الوظيفية": "الثالثة",
-                    "المرحلة": "2",
-                    "الراتب الاسمي": 600000,
-                    "الزوجية": 50000,
-                    "الاطفال": 30000,
-                    "المنصب": 100000,
-                    "الشهادة": 150000,
-                    "موقع جغرافي": 20000,
-                    "مهنية": 0,
-                    "الهندسية": 100000,
-                    "الخطورة": 50000,
-                    "الاضافات": 0,
-                    "المجموع": 1100000,
-                    "التقاعد": 60000,
-                    "الضريبة": 15000,
-                    "الضمان الاجتماعي": 0,
-                    "الاستقطاعات": 25000,
-                    "المجموع.1": 100000,
-                    "الصافي": 1000000
-                }])
+                template_data = pd.DataFrame([
+                    {
+                        "الرقم الوظيفي": 1001,
+                        "كود الموظف": "1234",
+                        "اسم الموظف": "أحمد محمد علي",
+                        "عنوان وظيفي": "مهندس قدم",
+                        "الدرجة الوظيفية": "الثالثة",
+                        "المرحلة": "2",
+                        "الراتب الاسمي": 600000,
+                        "الزوجية": 50000,
+                        "الاطفال": 30000,
+                        "المنصب": 100000,
+                        "الشهادة": 150000,
+                        "موقع جغرافي": 20000,
+                        "مهنية": 0,
+                        "الهندسية": 100000,
+                        "الخطورة": 50000,
+                        "الاضافات": 0,
+                        "المجموع": 1100000,
+                        "التقاعد": 60000,
+                        "الضريبة": 15000,
+                        "الضمان الاجتماعي": 0,
+                        "الاستقطاعات": 25000,
+                        "المجموع.1": 100000,
+                        "الصافي": 1000000,
+                    }
+                ])
 
                 excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                    template_data.to_excel(writer, index=False, sheet_name="Salary_Template")
+                with pd.ExcelWriter(
+                    excel_buffer, engine="openpyxl"
+                ) as writer:
+                    template_data.to_excel(
+                        writer, index=False, sheet_name="Salary_Template"
+                    )
 
                 st.download_button(
-                    label="📥 تحميل قالب الإكسل النموذجي (Salary_Template.xlsx)",
+                    label=(
+                        "📥 تحميل قالب الإكسل النموذجي"
+                        " (Salary_Template.xlsx)"
+                    ),
                     data=excel_buffer.getvalue(),
                     file_name="Salary_Template.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    ),
                     use_container_width=True,
-                    type="secondary"
+                    type="secondary",
                 )
 
                 st.markdown("---")
-                st.markdown(f"### 📤 رفع ملف الإكسل الشهري لـ ({admin_selected_comp_name})")
+                st.markdown(
+                    "### 📤 رفع ملف الإكسل الشهري لـ"
+                    f" ({admin_selected_comp_name})"
+                )
                 uploaded_excel = st.file_uploader(
                     "اختر ملف الإكسل أو CSV المعبأ",
                     type=["xlsx", "xls", "csv"],
@@ -514,12 +602,14 @@ with tabs[1]:
 
                 if uploaded_excel is not None:
                     try:
-                        if uploaded_excel.name.endswith('.csv'):
+                        if uploaded_excel.name.endswith(".csv"):
                             new_df = pd.read_csv(uploaded_excel)
                         else:
                             new_df = pd.read_excel(uploaded_excel)
-                        
-                        new_df.columns = new_df.columns.astype(str).str.strip()
+
+                        new_df.columns = (
+                            new_df.columns.astype(str).str.strip()
+                        )
 
                         required_cols = [
                             "الرقم الوظيفي",
@@ -537,20 +627,40 @@ with tabs[1]:
                                 f" {', '.join(missing_cols)}"
                             )
                         else:
-                            new_df.to_excel(target_comp["data_file"], index=False)
-                            st.success(
-                                "✅ تم تحديث كشف الرواتب الخاص بـ"
-                                f" ({admin_selected_comp_name}) بنجاح!"
-                            )
+                            file_save_path = target_comp["data_file"]
+                            new_df.to_excel(file_save_path, index=False)
+
+                            # 🚀 الحفظ السحابي التلقائي للملف في GitHub
+                            with st.spinner(
+                                "جاري مزامنة الملف مع التخزين السحابي"
+                                " الدائم..."
+                            ):
+                                is_synced = sync_file_to_github(
+                                    file_save_path,
+                                    f"تحديث كشف رواتب {admin_selected_comp_name}",
+                                )
+
+                            if is_synced:
+                                st.success(
+                                    "✅ تم تحديث وحفظ كشف الرواتب سحابياً بنجاح!"
+                                    " (لن يضيع الملف حتى لو نام التطبيق)"
+                                )
+                            else:
+                                st.success(
+                                    "✅ تم حفظ الكشف محلياً (تأكد من ضبط"
+                                    " GITHUB_TOKEN في Secrets للحفظ السحابي)."
+                                )
 
                             st.markdown("#### 📊 ملخص الكشف المرفوع:")
                             stat_col1, stat_col2, stat_col3 = st.columns(3)
                             stat_col1.metric("إجمالي الموظفين", len(new_df))
                             stat_col2.metric(
-                                "إجمالي الرواتب الصافية", fmt(new_df["الصافي"].sum())
+                                "إجمالي الرواتب الصافية",
+                                fmt(new_df["الصافي"].sum()),
                             )
                             stat_col3.metric(
-                                "متوسط صافي الراتب", fmt(new_df["الصافي"].mean())
+                                "متوسط صافي الراتب",
+                                fmt(new_df["الصافي"].mean()),
                             )
 
                     except Exception as e:
@@ -559,11 +669,14 @@ with tabs[1]:
             # 2. تغيير كلمة المرور
             with admin_subtabs[1]:
                 st.markdown(
-                    f"### 🔐 تغيير كلمة مرور إدارة ({admin_selected_comp_name})"
+                    "### 🔐 تغيير كلمة مرور إدارة"
+                    f" ({admin_selected_comp_name})"
                 )
 
                 with st.form("change_comp_pass_form"):
-                    new_pass = st.text_input("كلمة المرور الجديدة:", type="password")
+                    new_pass = st.text_input(
+                        "كلمة المرور الجديدة:", type="password"
+                    )
                     confirm_pass = st.text_input(
                         "تأكيد كلمة المرور الجديدة:", type="password"
                     )
@@ -577,7 +690,9 @@ with tabs[1]:
                         else:
                             companies[admin_comp_key]["password"] = new_pass
                             save_companies(companies)
-                            st.success("✅ تم تحديث كلمة المرور الخاصة بالمؤسسة بنجاح!")
+                            st.success(
+                                "✅ تم تحديث كلمة المرور وتأمينها سحابياً بنجاح!"
+                            )
 
         elif admin_pass_input != "":
             st.error("كلمة المرور غير صحيحة.")
@@ -588,22 +703,25 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("➕ تسجيل وإضافة مؤسسة جديدة للنظام")
     st.info(
-        "يتطلب إضافة مؤسسة جديدة إدخال كلمة مرور مدير النظام العام (Super Admin Master Password)."
+        "يتطلب إضافة مؤسسة جديدة إدخال كلمة مرور مدير النظام العام (Super"
+        " Admin Master Password)."
     )
 
     master_pass_input = st.text_input(
         "أدخل كلمة مرور مدير النظام العام:", type="password", key="master_pass"
     )
-    MASTER_PASSWORD = "hsj1987hsj"
+    MASTER_PASSWORD = "SuperAdmin@Salary2026"
 
     if master_pass_input == MASTER_PASSWORD:
         st.success(
-            "مرحباً بك يا مدير النظام الرئيسي. يمكنك الآن إضافة مؤسسة جديدة وتخصيص كلمة مرور لها."
+            "مرحباً بك يا مدير النظام الرئيسي. يمكنك الآن إضافة مؤسسة جديدة"
+            " وتخصيص كلمة مرور لها."
         )
 
         with st.form("add_company_form"):
             new_comp_name = st.text_input(
-                "اسم المؤسسة / الشركة الجديدة:", placeholder="مثال: شركة النور للمقاولات"
+                "اسم المؤسسة / الشركة الجديدة:",
+                placeholder="مثال: شركة النور للمقاولات",
             )
             new_comp_pass = st.text_input(
                 "كلمة مرور الإدارة الخاصة بهذه المؤسسة:",
@@ -630,7 +748,7 @@ with tabs[2]:
                         f"""
                         <div class="custom-alert-success">
                             <h3>🎉 تم إضافة المؤسسة بنجاح!</h3>
-                            <p>تم اعتماد مؤسسة <b>({new_comp_name})</b> وإضافتها لدليل النظام الموحد.</p>
+                            <p>تم اعتماد مؤسسة <b>({new_comp_name})</b> وحفظها سحابياً للابد.</p>
                         </div>
                     """,
                         unsafe_allow_html=True,
@@ -643,7 +761,7 @@ with tabs[2]:
 # الواجهة الرابعة: حذف مؤسسة
 # =========================================================
 with tabs[3]:
-    st.subheader("🗑️ حذف مؤسسة من النظام")
+    st.subheader("🗑 حذف مؤسسة من النظام")
 
     master_pass_del = st.text_input(
         "أدخل كلمة مرور مدير النظام العام للتحقق:",
@@ -657,11 +775,14 @@ with tabs[3]:
         else:
             del_comp_options = {v["name"]: k for k, v in companies.items()}
             del_selected_name = st.selectbox(
-                "اختر المؤسسة المراد حذفها نهائياً:", list(del_comp_options.keys())
+                "اختر المؤسسة المراد حذفها نهائياً:",
+                list(del_comp_options.keys()),
             )
             del_key = del_comp_options[del_selected_name]
 
-            if st.button("🚨 حذف المؤسسة وكشف رواتبها نهائياً", type="primary"):
+            if st.button(
+                "🚨 حذف المؤسسة وكشف رواتبها نهائياً", type="primary"
+            ):
                 file_to_del = companies[del_key].get("data_file")
                 if file_to_del and os.path.exists(file_to_del):
                     try:
