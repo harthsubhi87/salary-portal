@@ -448,7 +448,7 @@ with tabs[0]:
                             st.markdown(
                                 f"""
                                 <div class="info-card-date">
-                                    <div class="card-label">📅 تاريخ العلاوة المستحقة</div>
+                                    <div class="card-label">📅 تاريخ العلاوة (السنوية)</div>
                                     <div class="card-value">{date_ilawa}</div>
                                 </div>
                             """,
@@ -458,7 +458,7 @@ with tabs[0]:
                             st.markdown(
                                 f"""
                                 <div class="info-card-date">
-                                    <div class="card-label">🎖️ تاريخ الترقية المستحق / الجديد</div>
+                                    <div class="card-label">🎖️ تاريخ الترقية (الترفيع)</div>
                                     <div class="card-value">{date_tarqia}</div>
                                 </div>
                             """,
