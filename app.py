@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="تطبيق استعلام الرواتب والعلاوات",
     page_icon="💳",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -167,10 +167,14 @@ st.markdown(
 )
 
 COMPANIES_FILE = "companies.json"
+MASTER_PASSWORD = "SuperAdmin@Salary2026"
 
 # ---------------------------------------------------------
-# 2. وحدة التخزين السحابي عبر GitHub API
+# 2. إدارة الجلسة والتخزين السحابي عبر GitHub API
 # ---------------------------------------------------------
+if "is_super_admin" not in st.session_state:
+    st.session_state["is_super_admin"] = False
+
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", None)
 REPO_NAME = st.secrets.get("REPO_NAME", None)
 
@@ -257,7 +261,34 @@ def clean_date(val):
 
 
 # ---------------------------------------------------------
-# 3. الهيكل الرئيسي للتطبيق
+# 3. القائمة الجانبية: تسجيل دخول مدير النظام العام
+# ---------------------------------------------------------
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
+    st.markdown("### 👑 مدير النظام العام")
+    
+    if not st.session_state["is_super_admin"]:
+        admin_pass_input = st.text_input(
+            "كلمة مرور مدير النظام:",
+            type="password",
+            key="sidebar_master_pass",
+            placeholder="••••••••",
+        )
+        if st.button("🔑 تسجيل الدخول", use_container_width=True, type="primary"):
+            if admin_pass_input == MASTER_PASSWORD:
+                st.session_state["is_super_admin"] = True
+                st.success("تم تسجيل الدخول بنجاح!")
+                st.rerun()
+            else:
+                st.error("كلمة المرور غير صحيحة")
+    else:
+        st.success("🟢 أنت الآن مسجّل كـ مدير النظام العام")
+        if st.button("🚪 تسجيل الخروج", use_container_width=True):
+            st.session_state["is_super_admin"] = False
+            st.rerun()
+
+# ---------------------------------------------------------
+# 4. الهيكل الرئيسي للتطبيق
 # ---------------------------------------------------------
 
 st.markdown(
@@ -272,9 +303,13 @@ st.markdown(
 
 companies = load_companies()
 
-tabs = st.tabs(
-    ["🔒 استعلام الموظف", "⚙️ إدارة المؤسسات", "➕ إضافة مؤسسة", "🗑️ حذف مؤسسة"]
-)
+# تحديد التبويبات المتاحة بحسب صلاحية المستخدم
+if st.session_state["is_super_admin"]:
+    tab_titles = ["🔒 استعلام الموظف", "⚙️ إدارة المؤسسات", "➕ إضافة مؤسسة", "🗑️ حذف مؤسسة"]
+else:
+    tab_titles = ["🔒 استعلام الموظف", "⚙️ إدارة المؤسسات"]
+
+tabs = st.tabs(tab_titles)
 
 # =========================================================
 # الواجهة الأولى: استعلام الموظف
@@ -284,8 +319,7 @@ with tabs[0]:
 
     if not companies:
         st.info(
-            "ℹ️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى إضافة مؤسسة من تبويب"
-            " (➕ إضافة مؤسسة)."
+            "ℹ️ لا توجد مؤسسات مضافة في النظام حالياً. يرجى مراجعة مدير النظام لإضافة مؤسستك."
         )
     else:
         comp_options = {v["name"]: k for k, v in companies.items()}
@@ -404,7 +438,7 @@ with tabs[0]:
                                 unsafe_allow_html=True,
                             )
 
-                        # الصف الثالث: تاريخ العلاوة وتاريخ الترقية (التحديث الجديد)
+                        # الصف الثالث: تاريخ العلاوة وتاريخ الترقية
                         col_date1, col_date2 = st.columns(2)
                         
                         date_ilawa = clean_date(emp.get('تاريخ  العلاوة المستحق ', emp.get('تاريخ العلاوة المستحقة', '-')))
@@ -574,7 +608,6 @@ with tabs[1]:
                     "💡 القالب النموذجي المحدث يحتوي على كافة الحقول المالية وتواريخ العلاوة والترقية:"
                 )
 
-                # إنشاء نموذج مطابق لهيكل Salary_Template.xlsx المحدث
                 template_data = pd.DataFrame([
                     {
                         "الرقم الوظيفي": 1001,
@@ -732,25 +765,13 @@ with tabs[1]:
             st.error("كلمة المرور غير صحيحة.")
 
 # =========================================================
-# الواجهة الثالثة: إضافة مؤسسة جديدة
+# الواجهات الخاصة بـ مدير النظام العام فقط (تظهر عند تسجيل الدخول)
 # =========================================================
-with tabs[2]:
-    st.subheader("➕ تسجيل وإضافة مؤسسة جديدة للنظام")
-    st.info(
-        "يتطلب إضافة مؤسسة جديدة إدخال كلمة مرور مدير النظام العام (Super"
-        " Admin Master Password)."
-    )
-
-    master_pass_input = st.text_input(
-        "أدخل كلمة مرور مدير النظام العام:", type="password", key="master_pass"
-    )
-    MASTER_PASSWORD = "SuperAdmin@Salary2026"
-
-    if master_pass_input == MASTER_PASSWORD:
-        st.success(
-            "مرحباً بك يا مدير النظام الرئيسي. يمكنك الآن إضافة مؤسسة جديدة"
-            " وتخصيص كلمة مرور لها."
-        )
+if st.session_state["is_super_admin"]:
+    # الواجهة الثالثة: إضافة مؤسسة جديدة
+    with tabs[2]:
+        st.subheader("➕ تسجيل وإضافة مؤسسة جديدة للنظام")
+        st.success("🟢 بصفتك مدير النظام العام، يمكنك إضافة مؤسسة جديدة وتخصيص كلمة مرور لها مباشرة.")
 
         with st.form("add_company_form"):
             new_comp_name = st.text_input(
@@ -788,22 +809,10 @@ with tabs[2]:
                         unsafe_allow_html=True,
                     )
 
-    elif master_pass_input != "":
-        st.error("كلمة مرور مدير النظام العام غير صحيحة.")
+    # الواجهة الرابعة: حذف مؤسسة
+    with tabs[3]:
+        st.subheader("🗑 حذف مؤسسة من النظام")
 
-# =========================================================
-# الواجهة الرابعة: حذف مؤسسة
-# =========================================================
-with tabs[3]:
-    st.subheader("🗑 حذف مؤسسة من النظام")
-
-    master_pass_del = st.text_input(
-        "أدخل كلمة مرور مدير النظام العام للتحقق:",
-        type="password",
-        key="master_pass_del",
-    )
-
-    if master_pass_del == "SuperAdmin@Salary2026":
         if not companies:
             st.info("لا توجد مؤسسات مضافة حالياً لحذفها.")
         else:
