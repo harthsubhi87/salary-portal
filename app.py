@@ -441,14 +441,14 @@ with tabs[0]:
                         # الصف الثالث: تاريخ العلاوة وتاريخ الترقية
                         col_date1, col_date2 = st.columns(2)
                         
-                        date_ilawa = clean_date(emp.get('تاريخ  العلاوة المستحق ', emp.get('تاريخ العلاوة المستحقة', '-')))
+                        date_ilawa = clean_date(emp.get('تاريخ العلاوة السنوية ', emp.get('تاريخ العلاوة السنوية', '-')))
                         date_tarqia = clean_date(emp.get('تاريخ الترقية ', emp.get('تاريخ الترقية', '-')))
 
                         with col_date1:
                             st.markdown(
                                 f"""
                                 <div class="info-card-date">
-                                    <div class="card-label">📅 تاريخ العلاوة (السنوية)</div>
+                                    <div class="card-label">📅تاريخ العلاوة السنوية</div>
                                     <div class="card-value">{date_ilawa}</div>
                                 </div>
                             """,
