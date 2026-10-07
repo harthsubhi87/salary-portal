@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="تطبيق استعلام الرواتب والعلاوات",
     page_icon="💳",
     layout="wide",
-    initial_sidebar_state="auto",  # تم التعديل لمنع انضغاط القائمة على الهواتف
+    initial_sidebar_state="collapsed",  # إخفاء القائمة افتراضياً لضمان عدم تغطية الشاشة على الجوال
 )
 
 st.markdown(
@@ -32,17 +32,13 @@ st.markdown(
         background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
     }
 
-    /* إصلاح استجابة القائمة الجانبية على الهواتف المحمولة */
-    [data-testid="stSidebar"] {
-        min-width: 280px !important;
-        white-space: normal !important;
-        word-break: normal !important;
+    /* تطبيق العرض المخصص للشريط الجانبي فقط عندما يكون مفتوحاً */
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 300px !important;
+        max-width: 85vw !important;
     }
-    
+
     @media (max-width: 768px) {
-        [data-testid="stSidebar"] {
-            min-width: 80vw !important;
-        }
         .block-container {
             padding-left: 0.8rem !important;
             padding-right: 0.8rem !important;
@@ -69,14 +65,14 @@ st.markdown(
     .main-blue-header h1 {
         color: #ffffff !important;
         font-weight: 800;
-        font-size: 24px;
+        font-size: 22px;
         margin: 0;
         text-align: center;
     }
     .main-blue-header p {
         color: #e2e8f0;
         margin-top: 6px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 400;
         text-align: center;
     }
@@ -682,10 +678,9 @@ if st.session_state["is_super_admin"]:
 
                     companies[new_key] = {
                         "name": new_comp_name,
-                        "password": new_pass if 'new_pass' in locals() else new_comp_pass,
+                        "password": new_comp_pass,
                         "data_file": new_data_file,
                     }
-                    companies[new_key]["password"] = new_comp_pass
                     save_companies(companies)
 
                     st.markdown(
