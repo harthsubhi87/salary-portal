@@ -18,5 +18,10 @@
         "name": "مديرية بلدية عنه",
         "password": "ششىش",
         "data_file": "Salary_comp_1791370834.xlsx"
+    },
+    "comp_1791397096": {
+        "name": "مديرية بلدية راوه",
+        "password": "rawa",
+        "data_file": "Salary_comp_1791397096.xlsx"
     }
 }
