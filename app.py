@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="تطبيق استعلام الرواتب والعلاوات",
     page_icon="💳",
     layout="wide",
-    initial_sidebar_state="collapsed",  # إخفاء القائمة افتراضياً لضمان عدم تغطية الشاشة على الجوال
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -32,13 +32,31 @@ st.markdown(
         background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
     }
 
-    /* تطبيق العرض المخصص للشريط الجانبي فقط عندما يكون مفتوحاً */
-    [data-testid="stSidebar"][aria-expanded="true"] {
-        min-width: 300px !important;
-        max-width: 85vw !important;
-    }
-
+    /* ---------------------------------------------------------
+       حل جذري ونهائي لشريط القائمة الجانبية على الهواتف (RTL Fix)
+       --------------------------------------------------------- */
     @media (max-width: 768px) {
+        /* إخفاء القائمة تماماً عند إغلاقها لمنع أي تداخل أو انضغاط على الهواتف */
+        [data-testid="stSidebar"][aria-expanded="false"] {
+            display: none !important;
+        }
+        
+        /* إظهار القائمة كدرج عائم منظم فقط عند فتحها يدوياً */
+        [data-testid="stSidebar"][aria-expanded="true"] {
+            display: block !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            left: auto !important;
+            width: 82vw !important;
+            max-width: 320px !important;
+            height: 100vh !important;
+            z-index: 999999 !important;
+            background-color: #ffffff !important;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.25) !important;
+            overflow-y: auto !important;
+        }
+
         .block-container {
             padding-left: 0.8rem !important;
             padding-right: 0.8rem !important;
