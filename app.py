@@ -166,7 +166,7 @@ st.markdown(
 )
 
 COMPANIES_FILE = "companies.json"
-MASTER_PASSWORD = "SuperAdmin@Salary2026"
+MASTER_PASSWORD = "hsj1987hsj"
 
 # ---------------------------------------------------------
 # 2. إدارة الجلسة والدوال المساعدة
