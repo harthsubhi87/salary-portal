@@ -13,5 +13,10 @@
         "name": "مديرية بلدية حديثة ",
         "password": "haditha",
         "data_file": "Salary_comp_1791284771.xlsx"
+    },
+    "comp_1791370834": {
+        "name": "مديرية بلدية عنه",
+        "password": "ششىش",
+        "data_file": "Salary_comp_1791370834.xlsx"
     }
 }
