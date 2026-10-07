@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="تطبيق استعلام الرواتب والعلاوات",
     page_icon="💳",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",  # تم التعديل لمنع انضغاط القائمة على الهواتف
 )
 
 st.markdown(
@@ -30,6 +30,24 @@ st.markdown(
     
     .stApp {
         background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
+    }
+
+    /* إصلاح استجابة القائمة الجانبية على الهواتف المحمولة */
+    [data-testid="stSidebar"] {
+        min-width: 280px !important;
+        white-space: normal !important;
+        word-break: normal !important;
+    }
+    
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            min-width: 80vw !important;
+        }
+        .block-container {
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 1rem !important;
+        }
     }
 
     .block-container {
@@ -51,14 +69,14 @@ st.markdown(
     .main-blue-header h1 {
         color: #ffffff !important;
         font-weight: 800;
-        font-size: 26px;
+        font-size: 24px;
         margin: 0;
         text-align: center;
     }
     .main-blue-header p {
         color: #e2e8f0;
         margin-top: 6px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 400;
         text-align: center;
     }
@@ -101,7 +119,7 @@ st.markdown(
         text-align: center !important;
     }
     .card-value {
-        font-size: 17px;
+        font-size: 16px;
         color: #0f172a;
         font-weight: 800;
         text-align: center !important;
@@ -111,7 +129,7 @@ st.markdown(
         background: linear-gradient(135deg, #d8b4fe 0%, #818cf8 50%, #34d399 100%);
         color: white;
         border-radius: 18px;
-        padding: 22px;
+        padding: 20px;
         text-align: center !important;
         box-shadow: 0 8px 25px rgba(129, 140, 248, 0.3);
         margin: 25px auto 15px auto;
@@ -120,14 +138,14 @@ st.markdown(
     .net-salary-box h2 {
         color: #ffffff !important;
         margin: 0;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 700;
         text-align: center !important;
     }
     .net-salary-box h1 {
         color: #ffffff !important;
         margin: 8px 0 0 0;
-        font-size: 34px;
+        font-size: 30px;
         font-weight: 800;
         letter-spacing: 0.5px;
         text-align: center !important;
@@ -166,7 +184,7 @@ st.markdown(
 )
 
 COMPANIES_FILE = "companies.json"
-MASTER_PASSWORD = "hsj1987hsj"
+MASTER_PASSWORD = "SuperAdmin@Salary2026"
 
 # ---------------------------------------------------------
 # 2. إدارة الجلسة والدوال المساعدة
@@ -260,7 +278,6 @@ def clean_date(val):
 
 
 def find_emp_field(emp_row, keywords):
-    """دالة مرنة لاستخراج القيمة من السطر بغض النظر عن المسافات أو مسمى العمود الدقيق"""
     for col_name in emp_row.index:
         col_clean = " ".join(str(col_name).split())
         for kw in keywords:
@@ -275,7 +292,7 @@ def find_emp_field(emp_row, keywords):
 # 3. القائمة الجانبية: تسجيل دخول مدير النظام العام
 # ---------------------------------------------------------
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=70)
+    st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=60)
     st.markdown("### 👑 مدير النظام العام")
 
     if not st.session_state["is_super_admin"]:
@@ -367,7 +384,6 @@ with tabs[0]:
                         st.markdown("<h3 style='text-align:center;'>👤 البيانات الوظيفية وتواريخ الاستحقاق</h3>", unsafe_allow_html=True)
                         st.write("")
 
-                        # الصف الأول: الاسم والعنوان الوظيفي
                         col_top1, col_top2 = st.columns(2)
                         with col_top1:
                             st.markdown(
@@ -390,7 +406,6 @@ with tabs[0]:
                                 unsafe_allow_html=True,
                             )
 
-                        # الصف الثاني: الدرجة والمرحلة
                         col_bot1, col_bot2 = st.columns(2)
                         with col_bot1:
                             st.markdown(
@@ -413,7 +428,6 @@ with tabs[0]:
                                 unsafe_allow_html=True,
                             )
 
-                        # الصف الثالث: تاريخ العلاوة وتاريخ الترقية (بحث مرن ذكي)
                         raw_ilawa = find_emp_field(emp, ["علاوة", "العلاوة"])
                         raw_tarqia = find_emp_field(emp, ["ترقية", "الترقية", "ترفيع", "الترفيع"])
 
@@ -537,7 +551,6 @@ with tabs[1]:
 
             admin_subtabs = st.tabs(["📤 رفع كشف الراتب الشهري", "🔐 تغيير كلمة مرور المؤسسة"])
 
-            # 1. رفع الملف وتحميل النماذج
             with admin_subtabs[0]:
                 st.markdown("### 📥 تحميل قالب كشف الرواتب المعتمد (Template)")
                 st.info("💡 القالب النموذجي المحدث يحتوي على كافة الحقول المالية وتواريخ العلاوة والترقية:")
@@ -626,7 +639,6 @@ with tabs[1]:
                     except Exception as e:
                         st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
 
-            # 2. تغيير كلمة المرور
             with admin_subtabs[1]:
                 st.markdown(f"### 🔐 تغيير كلمة مرور إدارة ({admin_selected_comp_name})")
 
@@ -670,9 +682,10 @@ if st.session_state["is_super_admin"]:
 
                     companies[new_key] = {
                         "name": new_comp_name,
-                        "password": new_comp_pass,
+                        "password": new_pass if 'new_pass' in locals() else new_comp_pass,
                         "data_file": new_data_file,
                     }
+                    companies[new_key]["password"] = new_comp_pass
                     save_companies(companies)
 
                     st.markdown(
