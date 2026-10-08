@@ -16,7 +16,24 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+import streamlit.components.v1 as components
 
+# ---------------------------------------------------------
+# منع المتصفح والتطبيق من الخمول أو قطع الاتصال (Keep-Alive)
+# ---------------------------------------------------------
+components.html(
+    """
+    <script>
+        // إرسال نبضة تفاعل خفية كل 25 ثانية لإبقاء WebSocket نشطاً
+        setInterval(function() {
+            var evt = new Event('mousemove');
+            window.dispatchEvent(evt);
+        }, 25000);
+    </script>
+    """,
+    height=0,
+    width=0,
+)
 st.markdown(
     """
     <style>
